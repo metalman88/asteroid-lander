@@ -1,7 +1,8 @@
 from GameDataPanels import LeaderboardPanel, MineralPanel, PlotsPanel
 from PhysicsEngine import PhysicsEngine
+from ShipPhysics import ShipPhysics
 from game.Constants import IRON, GOLD, COPPER, IRON_PLOT_TOTAL, GOLD_PLOT_TOTAL, \
-    COPPER_PLOT_TOTAL, GAME_GOAL_IRON, GAME_GOAL_GOLD, GAME_GOAL_COPPER
+    COPPER_PLOT_TOTAL, GAME_GOAL_IRON, GAME_GOAL_GOLD, GAME_GOAL_COPPER, NONE
 from game.libs.pgu import gui
 from pygame.locals import *
 import math
@@ -34,6 +35,7 @@ class LanderContainer(gui.Container):
 
         # Initialize screen components: Gameplay Canvas
         self.lander = PhysicsEngine(0, 36, 1024, 524)
+        self.physics = ShipPhysics()
 
         # Initialize screen components: Lander Readouts
         self.altitude_readout = gui.TextArea(value="Altitude = 800 m", width=256, height=20, focusable=False)
@@ -62,6 +64,11 @@ class LanderContainer(gui.Container):
         self.add(self.plotsPanel, 744, 616)
         self.add(self.mineralPanel, 320, 616)
         self.add(self.leaderboardPanel, 24, 616)
+        
+        # Initialize values for ShipPhysics
+        self.plot_type = NONE
+        self.ore_weight = 0
+        self.extra_weight = 0.01
 
     def clicked_in_button(self, button, position):
         return button.collidepoint(position)
@@ -117,24 +124,36 @@ class LanderContainer(gui.Container):
         if abs(self.lander.get_horizontal_velocity()) > 4 or self.lander.get_vertical_velocity() > 4:
             pygame.draw.rect(screen, (255, 0, 0), (0,560,1024,2), 0)
         self.notification_zone.value = self.notify_value
-        if (status == "RUNNING"):       
-            self.fuel_level -= 1
-        self.fuel_level_readout.value = "Fuel: " + str(self.fuel_level) + " L"
+        #ATTACH THE HOOK FOR THE NEW PHYSICS HERE!!!
+        if (status == "RUNNING"):
+            if self.lander.thrusters: 
+                self.fuel_level -= 1
+                self.lander.gravity = self.physics.updateWeight(self.fuel_level); 
+            if self.lander.moving_left: 
+                self.fuel_level -= 1
+            if self.lander.moving_right: 
+                self.fuel_level -= 1
+        self.fuel_level_readout.value = "Fuel: " + str(self.fuel_level) + " L | Weight: " + str(self.physics.updateWeight(self.fuel_level))
 
     def triggerMiningPlotIron(self):
         self.updateNotify("Mining: Iron")
         self.controller.RequestPlot(IRON)
+        self.plot_type = IRON
 
     def triggerMiningPlotGold(self):
         self.updateNotify("Mining: Gold")
         self.controller.RequestPlot(GOLD)
+        self.plot_type = GOLD
 
     def triggerMiningPlotCopper(self):
         self.updateNotify("Mining: Copper")
         self.controller.RequestPlot(COPPER)
+        self.plot_type = COPPER
 
     def triggerBaseStation(self):
         self.fuel_level = 1000.00
+        self.plot_type = NONE
+        self.physics.updateFuelBasedOnOre(self.plot_type)
         self.updateNotify("Returning to Base Station")
         self.controller.ReturnToEarth()
     
@@ -151,7 +170,9 @@ class LanderContainer(gui.Container):
     
     def triggerCrashedLanded(self):
         self.controller.CrashLanded()
+        
     def triggerLandedSafely(self,score):
+    	self.physics.updateFuelBasedOnOre(self.plot_type)
         self.controller.LandedSafely(score)
         
     def refreshLeaderboard(self,data):

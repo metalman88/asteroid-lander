@@ -39,6 +39,7 @@ IRON_PLOT_TOTAL = 30
 GOLD = "gold"
 COPPER = "copper"
 IRON = "iron"
+NONE = "none"
 BUY_RATE = 5
 FUEL_EXCHANGE = 10 # this much units of fuel will be bought per transaction
 GOLD_MINE_LIMIT = 5

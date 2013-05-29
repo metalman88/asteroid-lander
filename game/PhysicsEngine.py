@@ -53,6 +53,7 @@ class PhysicsEngine(Sprite):
     def update_velocity(self):
         """ Update velocities depending on which direction ship is moving """
         # Set thruster (up/down) movement
+        #This here thing is where I'll have it adjust the gravity/slowing based on the current weight. (Also up top when it inits.)
         if self.thrusters:
             self.velocity_y -= self.gravity
         else:
